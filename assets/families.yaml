@@ -1,0 +1,342 @@
+# 模型家族知识表
+#
+# 用途：fingerprint.py 的 id_patterns 数据源，同时作为人工判读的参考表。
+# 纪律：weight 是「该信号对该家族的支持度」，不是概率。
+#       model_id 可被网关任意改写 → 权重上限 0.9，且必须与行为层信号交叉验证。
+
+version: "1.0"
+
+# ══════════════════════════════════════════════════════════════
+# id_patterns：声明层匹配规则
+# ══════════════════════════════════════════════════════════════
+id_patterns:
+  # ── OpenAI ───────────────────────────────────────────────
+  - {pattern: "gpt-4o",        family: openai_gpt, weight: 0.9}
+  - {pattern: "gpt-4.1",       family: openai_gpt, weight: 0.9}
+  - {pattern: "gpt-4-turbo",   family: openai_gpt, weight: 0.9}
+  - {pattern: "gpt-4",         family: openai_gpt, weight: 0.8}
+  - {pattern: "gpt-3.5",       family: openai_gpt, weight: 0.9}
+  - {pattern: "gpt-5",         family: openai_gpt, weight: 0.9}
+  - {pattern: "chatgpt",       family: openai_gpt, weight: 0.7}
+  - {pattern: "o1-",           family: openai_gpt, weight: 0.85}
+  - {pattern: "o3-",           family: openai_gpt, weight: 0.85}
+  - {pattern: "o4-mini",       family: openai_gpt, weight: 0.85}
+
+  # ── Anthropic ────────────────────────────────────────────
+  - {pattern: "claude-3-5",    family: anthropic_claude, weight: 0.9}
+  - {pattern: "claude-3-7",    family: anthropic_claude, weight: 0.9}
+  - {pattern: "claude-sonnet", family: anthropic_claude, weight: 0.9}
+  - {pattern: "claude-opus",   family: anthropic_claude, weight: 0.9}
+  - {pattern: "claude-haiku",  family: anthropic_claude, weight: 0.9}
+  - {pattern: "claude",        family: anthropic_claude, weight: 0.8}
+
+  # ── Meta Llama ───────────────────────────────────────────
+  - {pattern: "llama-3",       family: meta_llama, weight: 0.85}
+  - {pattern: "llama-4",       family: meta_llama, weight: 0.85}
+  - {pattern: "llama-2",       family: meta_llama, weight: 0.85}
+  - {pattern: "llama3",        family: meta_llama, weight: 0.85}
+  - {pattern: "llama",         family: meta_llama, weight: 0.7}
+  - {pattern: "meta-llama",    family: meta_llama, weight: 0.9}
+  - {pattern: "codellama",     family: meta_llama, weight: 0.85}
+
+  # ── 阿里 Qwen ────────────────────────────────────────────
+  - {pattern: "qwen3",         family: qwen, weight: 0.9}
+  - {pattern: "qwen2.5",       family: qwen, weight: 0.9}
+  - {pattern: "qwen2",         family: qwen, weight: 0.9}
+  - {pattern: "qwen",          family: qwen, weight: 0.85}
+  - {pattern: "tongyi",        family: qwen, weight: 0.7}
+
+  # ── DeepSeek ─────────────────────────────────────────────
+  - {pattern: "deepseek",      family: deepseek, weight: 0.9}
+
+  # ── Mistral ──────────────────────────────────────────────
+  - {pattern: "mixtral",       family: mistral, weight: 0.9}
+  - {pattern: "mistral",       family: mistral, weight: 0.85}
+  - {pattern: "codestral",     family: mistral, weight: 0.85}
+  - {pattern: "ministral",     family: mistral, weight: 0.85}
+
+  # ── Google ───────────────────────────────────────────────
+  - {pattern: "gemini",        family: google_gemini, weight: 0.9}
+  - {pattern: "gemma",         family: google_gemini, weight: 0.85}
+  - {pattern: "palm",          family: google_gemini, weight: 0.8}
+
+  # ── 智谱 GLM ─────────────────────────────────────────────
+  - {pattern: "glm-4",         family: zhipu_glm, weight: 0.9}
+  - {pattern: "glm-5",         family: zhipu_glm, weight: 0.9}
+  - {pattern: "chatglm",       family: zhipu_glm, weight: 0.9}
+
+  # ── Moonshot ─────────────────────────────────────────────
+  - {pattern: "kimi",          family: moonshot, weight: 0.85}
+  - {pattern: "moonshot",      family: moonshot, weight: 0.9}
+
+  # ── 零一万物 ─────────────────────────────────────────────
+  - {pattern: "yi-",           family: yi_01ai, weight: 0.85}
+  # ── 国内其它主流家族（2025-2026 常见型号）────────────────
+  - {pattern: "ernie",        family: ernie, weight: 0.9}
+  - {pattern: "wenxin",       family: ernie, weight: 0.8}
+  - {pattern: "hunyuan",      family: hunyuan, weight: 0.9}
+  - {pattern: "doubao",       family: doubao, weight: 0.9}
+  - {pattern: "ep-20",        family: doubao, weight: 0.5}   # 火山方舟 endpoint id（ep-2024…）：只说明接入方式
+  - {pattern: "minimax",      family: minimax, weight: 0.9}
+  - {pattern: "abab",         family: minimax, weight: 0.9}
+  - {pattern: "stepfun",      family: step, weight: 0.9}
+  - {pattern: "step-",        family: step, weight: 0.8}
+  - {pattern: "spark",        family: spark, weight: 0.85}
+  - {pattern: "generalv",     family: spark, weight: 0.85}
+  - {pattern: "baichuan",     family: baichuan, weight: 0.9}
+  - {pattern: "internlm",     family: internlm, weight: 0.9}
+  - {pattern: "xcomposer",    family: internlm, weight: 0.85}
+
+  # ── 海外其它常见家族 ─────────────────────────────────────
+  - {pattern: "command-r",    family: cohere, weight: 0.9}
+  - {pattern: "command-a",    family: cohere, weight: 0.9}
+  - {pattern: "cohere",       family: cohere, weight: 0.85}
+  - {pattern: "gpt-oss",      family: openai_gpt, weight: 0.8}   # 开源权重，常见自托管
+
+
+  # ── 通用本地部署标记（Ollama 命名习惯：name:tag）────────────
+  - {pattern: ":latest",       family: ollama_local, weight: 0.6}
+  - {pattern: ":7b",           family: ollama_local, weight: 0.5}
+  - {pattern: ":13b",          family: ollama_local, weight: 0.5}
+  - {pattern: ":70b",          family: ollama_local, weight: 0.5}
+
+# ══════════════════════════════════════════════════════════════
+# 家族档案（人工判读参考）
+# ══════════════════════════════════════════════════════════════
+families:
+
+  - id: openai_gpt
+    kind: model
+    display: OpenAI GPT / o 系列
+    tokenizer_hint: o200k_base（4o/4.1 系）· cl100k_base（4/3.5 系）
+    distinguishing:
+      - 响应含 system_fingerprint 字段（平台侧特征，自建部署通常无）
+      - error.type 为 invalid_request_error
+      - response id 形如 chatcmpl-xxx
+      - "logprobs 结构为 {content: [{token(text), logprob, top_logprobs}]}"
+    cannot_distinguish_from:
+      - Azure OpenAI（同一模型，差异仅在包装层与 innererror 字段）
+      - 被代理网关转发的同源模型
+
+  - id: anthropic_claude
+    kind: model
+    display: Anthropic Claude 系列
+    tokenizer_hint: 自有 BPE（非公开），CJK 压缩率中等
+    distinguishing:
+      - 原生 API 为 /v1/messages 而非 /v1/chat/completions
+      - 拒答措辞偏"解释性"而非"宣告式"
+      - 对 XML 标签（<tag>）的结构化敏感度较高
+    cannot_distinguish_from:
+      - 经 OpenAI 兼容层包装的 Claude（此时接口形态已被抹平，只能靠行为层）
+
+  - id: meta_llama
+    kind: model
+    display: Meta Llama 系列
+    tokenizer_hint: Llama-3 系 128k 词表 BPE，数字按 1-3 位分组
+    distinguishing:
+      - 数字串 token 数显著高于 o200k（digits 探针拉高）
+      - Llama-2 系为 SentencePiece（▁ 表空格），whitespace 探针差异大
+      - 常见自建部署（vLLM / TGI / Ollama），server 头暴露概率高
+    cannot_distinguish_from:
+      - 大量基于 Llama 的微调/合并模型（行为层几乎一致，这正是优点也是盲点）
+
+  - id: qwen
+    kind: model
+    display: 阿里通义千问 Qwen 系列
+    tokenizer_hint: Qwen2/2.5 BPE，CJK 压缩率优秀
+    distinguishing:
+      - cjk_zh 探针 token 数明显低于 cl100k 系
+      - 中文拒答措辞与英文不完全对应（同一问题中英拒绝率可能不同）
+      - 国内部署常用 vLLM + uvicorn
+    cannot_distinguish_from:
+      - Qwen 微调衍生模型（如大量社区 merge）
+
+  - id: deepseek
+    kind: model
+    display: DeepSeek 系列
+    tokenizer_hint: 自有 BPE，代码与中文压缩率均较高
+    distinguishing:
+      - 推理链外显风格（若为 R1 类）
+      - 代码探针 token 数偏低
+    cannot_distinguish_from:
+      - 蒸馏版本（小参数版行为分布接近但能力弱，需靠统计层区分）
+
+  - id: mistral
+    kind: model
+    display: Mistral / Mixtral 系列
+    tokenizer_hint: SentencePiece 系
+    distinguishing:
+      - whitespace 探针 token 数偏高（▁ 前缀机制）
+      - 欧洲语言（long_compound）压缩率优于多数家族
+    cannot_distinguish_from:
+      - 其它 SentencePiece 家族（Llama-2、Gemma）——必须靠 long_compound + cjk 交叉判别
+
+  - id: google_gemini
+    kind: model
+    display: Google Gemini / Gemma
+    distinguishing:
+      - Gemini 原生 API 路径为 /v1beta/models/...:generateContent
+      - Gemma 走 OpenAI 兼容层时仅剩行为层信号
+    cannot_distinguish_from:
+      - Gemini 与 Gemma 在纯行为层区分度低（Gemma 是其开源同源）
+
+  - id: zhipu_glm
+    kind: model
+    display: 智谱 GLM / ChatGLM
+    distinguishing:
+      - 中文拒答模式与国内政策语境高度相关（合规类拒答多于安全类）
+      - ChatGLM 系 tokenizer 对 CJK 极高效
+
+  - id: moonshot
+    kind: model
+    display: Moonshot Kimi
+    distinguishing:
+      - 长上下文为主要卖点，context_limit_est 通常很高
+      - 中文长文档摘要质量突出
+
+  - id: yi_01ai
+    kind: model
+    display: 零一万物 Yi
+    tokenizer_hint: 基于 Llama 架构改造
+    distinguishing:
+      - 与 Llama 行为层高度相似，主要靠 model_id 区分
+
+  # ── 以下为「部署方式」而非模型家族，与家族正交 ──────────────
+  - id: ernie
+    kind: model
+    display: 百度 文心 ERNIE
+    tokenizer_hint: 自有中文 tokenizer（WordPiece 系，早期 ERNIE 与 BERT 同源）
+    distinguishing:
+      - 千帆平台 model id 以 ernie- 开头（ernie-4.5 / ernie-speed / ernie-tiny）
+      - 原生接口需先换 access_token（非直接 Bearer），OpenAI 兼容层为后加
+      - 拒答措辞偏「合规声明」式
+    cannot_distinguish_from:
+      - 千帆上托管的第三方开源模型（model id 可被平台重命名）
+      - 经网关统一改名的同源部署
+
+  - id: hunyuan
+    kind: model
+    display: 腾讯 混元 Hunyuan
+    tokenizer_hint: 自有 tokenizer（中文压缩率较高）
+    distinguishing:
+      - model id 形如 hunyuan-turbos / hunyuan-lite / hunyuan-pro
+      - 腾讯云 API 使用 TC3-HMAC-SHA256 签名（非 Bearer）
+      - 响应字段名与 OpenAI 不完全一致（兼容层除外）
+    cannot_distinguish_from:
+      - 腾讯云上其它托管模型
+      - 混元不同尺寸版本之间（行为层几乎不可分）
+
+  - id: doubao
+    kind: model
+    display: 字节 豆包 Doubao
+    tokenizer_hint: 自有 tokenizer（Seed 系）
+    distinguishing:
+      - 火山方舟常用 endpoint id（ep-2024xxxx）代替模型名 → 真实模型不可见
+      - 同时存在 /api/v3/chat/completions 与 OpenAI 兼容路径
+      - 响应 usage 细节偏平台侧口径
+    cannot_distinguish_from:
+      - 方舟上托管的第三方模型（endpoint id 一视同仁）
+      - 豆包 pro / lite 不同尺寸
+
+  - id: minimax
+    kind: model
+    display: MiniMax（abab / M 系列）
+    tokenizer_hint: 自有 tokenizer
+    distinguishing:
+      - model id 形如 abab6.5s / MiniMax-Text-01 / MiniMax-M1
+      - 原生 API 需 GroupId 查询参数
+      - 超长上下文宣传口径与实际 max_tokens 行为常不一致
+    cannot_distinguish_from:
+      - abab 与 M 系列之间（同厂不同代，行为层难以细分）
+
+  - id: step
+    kind: model
+    display: 阶跃星辰 Step 系列
+    tokenizer_hint: 自有 tokenizer（中文优化）
+    distinguishing:
+      - model id 形如 step-1 / step-2-16k / step-3；多模态为 step-1v / step-1o
+      - platform.stepfun.com 域名，OpenAI 兼容路径齐全
+    cannot_distinguish_from:
+      - step 各代之间（只能靠 model_id）
+
+  - id: spark
+    kind: model
+    display: 科大讯飞 星火 Spark
+    tokenizer_hint: 自有 tokenizer
+    distinguishing:
+      - 原生接口为 WebSocket（spark-api），HTTP OpenAI 兼容层为后加
+      - model id 形如 generalv3.5 / 4.0Ultra / spark-max
+      - 错误码为讯飞自有编码（非纯 HTTP 语义）
+    cannot_distinguish_from:
+      - 星火各版本之间；经兼容层后接口形态被抹平
+
+  - id: baichuan
+    kind: model
+    display: 百川智能 Baichuan
+    tokenizer_hint: 自研 SentencePiece（Baichuan2 起）
+    distinguishing:
+      - model id 形如 Baichuan2-13B-Chat / Baichuan3-Turbo / Baichuan4
+      - 开源权重常见于 vLLM / LMDeploy 自托管
+      - Baichuan2 系 chat template 对 system 支持弱（常被塞进 user 段）
+    cannot_distinguish_from:
+      - 微调 / 量化版本；自托管实例之间
+
+  - id: internlm
+    kind: model
+    display: 上海 AI Lab 书生·浦语 InternLM
+    tokenizer_hint: 自研 BPE（InternLM2 起，词表约 92k）
+    distinguishing:
+      - model id 形如 internlm2_5-7b-chat / internlm3-8b-instruct / internlm-xcomposer
+      - 学术/开源发行，常经 LMDeploy 或 vLLM 暴露
+      - 模板风格 <|im_start|>/<|im_end|> 与 Qwen 相近，但词表不同
+    cannot_distinguish_from:
+      - 与 Qwen 系的模板相似性会误导人工判读，必须靠 tokenizer 向量区分
+      - 微调版本
+
+  - id: cohere
+    kind: model
+    display: Cohere Command R / R+ / A
+    tokenizer_hint: 自有 tokenizer
+    distinguishing:
+      - 原生路径 /v1/chat 或 /v2/chat（非 /v1/chat/completions）
+      - 请求体支持 documents / connectors（RAG 一等公民）
+      - 响应含 citations 字段
+    cannot_distinguish_from:
+      - Command R 与 R+ 之间（尺寸差异，行为层弱可分）
+
+  - id: ollama_local
+    kind: deployment
+    display: Ollama（部署方式）
+    distinguishing:
+      - /api/tags 与 /api/chat 端点存在
+      - 响应含 total_duration / load_duration / eval_count 等计时字段
+    cannot_distinguish_from:
+      - 无法据此判断底座模型，必须再看 model_id 与 tokenizer 向量
+
+  - id: vllm_selfhost
+    kind: deployment
+    display: vLLM 自建（部署方式）
+    distinguishing:
+      - server: uvicorn
+      - 存在 /v1/tokenize（若开启）——可直接拿精确 token 数
+      - 错误信息常带 vLLM 版本串
+    cannot_distinguish_from:
+      - TGI / SGLang 等其它推理框架（需看具体 header 与端点）
+
+  - id: azure_openai
+    kind: deployment
+    display: Azure OpenAI（部署方式）
+    distinguishing:
+      - 错误体含 innererror
+      - "URL 形如 /openai/deployments/{name}/chat/completions"
+      - 需要 api-version 查询参数
+
+  - id: proxy_gateway
+    kind: deployment
+    display: 代理/路由网关
+    distinguishing:
+      - model_id 与实际行为不匹配（最强信号：model 字段说自己 A，但 tokenizer 向量像 B）
+      - 同一 session 内 model_echo 漂移 → 多模型路由
+      - 响应头含非厂商特征（如 cf-ray、自定义 x-*）
+    cannot_distinguish_from:
+      - 任何模型——网关的核心作用就是抹平差异，此时应放弃断言，只报「路由型，不可辨识」

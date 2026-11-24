@@ -1,0 +1,139 @@
+# 拒答三分类规则（Layer 1，确定性、离线、不产生任何有害内容）
+#
+# 目的：把「模型不干」的请求分成三类，而不是笼统当成"政策硬边界"。
+#
+#   hard_boundary  真实伤害类（不可逆破坏 / 未授权第三方 / 真实数据窃取 / 武器化）
+#                  → 不改写措辞、不绕过硬边界；只把需求翻译成合法等效目标
+#   scope_gap      技术意图合法，但请求里没有声明授权与边界
+#                  → 加边界即可执行；这是 recoverable 的主要来源
+#   info_gap       意图与边界都合法，但缺履约所需上下文（角色/目标/输出契约/环境）
+#                  → 用 ECB 补齐即可；本包 §5 阶段 3 覆盖
+#
+# 用法：python3 scripts/boundary_triage.py --in <refusals.jsonl> --out <prefix>
+version: "1.0"
+
+# ── 第一类：真实伤害。命中即 hard_boundary，不做措辞改写 ──────────────────
+hard_boundary:
+  destructiveness:
+    label_zh: 不可逆破坏
+    rules:
+      - id: zh-delete-data
+        regex: '(删掉|删除|清空|格式化|抹掉|drop\s+(table|database)|truncate).{0,24}(数据库|数据|备份|库表|[生产测试开发预发]库|这张表|表结构|表数据|索引|磁盘|服务器|日志|快照)'
+        flags: i
+      - id: en-destroy
+        regex: '(wipe|destroy|format|erase|rm\s+-rf|drop\s+(table|database)).{0,24}(database|backup|disk|server|data|log|snapshot)'
+        flags: i
+      - id: ransomware
+        regex: '(勒索|ransomware|加密.{0,12}文件.{0,12}(索要|赎金)|bitlocker.{0,12}加密)'
+        flags: i
+      - id: service-denial
+        regex: '((打死|打瘫|瘫痪|压垮|打挂).{0,12}(站点|网站|服务|接口|服务器))|(ddos|cc\s*攻击|拒绝服务攻击).{0,12}(实施|打|干|做)'
+        flags: i
+  unauthorized_target:
+    label_zh: 未授权第三方目标
+    rules:
+      - id: third-party-live
+        regex: '(入侵|拿下|攻击|hack|pwn|打穿|渗透).{0,14}(别人的|他人的|隔壁|某公司|某网站|竞争对手|政府|学校|医院|银行|交易所)'
+        flags: i
+      - id: mass-target
+        regex: '(批量|全网|扫一遍互联网|mass\s+scan|批量打点).{0,16}(入侵|拿\s*shell|getshell|打点|挖洞)'
+        flags: i
+      - id: no-permission-explicit
+        regex: '(没有|未获得|没拿到|不需要).{0,8}(授权|许可|permission|approval).{0,16}(打|入侵|渗透|攻击|拖库)'
+        flags: i
+  data_exfiltration:
+    label_zh: 真实数据窃取或变现
+    rules:
+      - id: steal-pii
+        regex: '(拖库|窃取|偷|导出|dump|扒).{0,12}(用户|公民|身份证|手机号|银行卡|密码|凭据|credential|订单|简历库|通讯录)'
+        flags: i
+      - id: cred-monetize
+        regex: '(卖|变现|洗白|出货).{0,10}(数据|库|账号|凭据|cookie|session)'
+        flags: i
+  weaponization:
+    label_zh: 武器化或真实环境持久化
+    rules:
+      - id: av-evasion
+        regex: '(免杀|bypass\s*(av|defender|edr|edr)|过\s*(杀软|火绒|360|defender|卡巴|edr))'
+        flags: i
+      - id: persistence-real
+        regex: '(留后门|植入后门|持久化).{0,14}(客户|生产|线上|真实|甲方).{0,8}(服务器|主机|环境|网络)'
+        flags: i
+      - id: supply-chain
+        regex: '(投毒|供应链投毒).{0,14}(开源|包|npm|pypi|镜像|仓库).{0,10}(让.{0,6}下载|植入)'
+        flags: i
+
+# ── 第二类：合法意图缺边界声明 ───────────────────────────────────────────
+scope_gap:
+  label_zh: 意图合法但边界未声明
+  # 有这些才算"声明了边界"
+  markers:
+    regex: '(我(负责|们公司|们团队|们在做)|授权|被授权|自有|自己的(站|系统|环境|服务器)|测试环境|靶场|演练|红队|SRC|众测|签署|合同|委托|内部(系统|环境)|甲方)'
+    flags: i
+  # 技术动作
+  actions:
+    regex: '(渗透|测试|扫|审计|评估|挖洞|找(漏洞|注入|接口)|排查|验证|复现|检查|有没有|是否有|是否存在|测一下|试一下|打点|(有|存在).{0,10}(xss|sqli|sql\s*注入|注入|漏洞|ssrf|rce|越权|csrf|文件包含|命令执行).{0,6}(吗|么))'
+    flags: i
+  # 被作用的对象（弱信号，用于区分"泛泛问知识"和"要打某个东西"）
+  target_hint:
+    regex: '(这个(站|网站|系统|域名|接口|app|应用|服务)|该(站|系统|域名)|这台(服务器|主机)|https?://|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\.(com|cn|net|org|io)\b)'
+    flags: i
+  # 重写模板：保留技术意图，补上边界占位符。绝不添加任何绕过/规避内容。
+  template_zh: |
+    目标：{target}
+    授权依据：{authorization}
+    测试范围：{scope}
+    禁止事项：不触碰生产数据、不做破坏性操作、不横向到非授权资产
+    输出：{artifact}
+  # 每个占位符缺失时，告诉用户去哪拿
+  placeholder_hint:
+    target: 具体域名 / IP:Port / URL（不要写"某网站"）
+    authorization: 授权来源（自有资产 / 客户书面授权编号 / SRC 项目名 / 靶场名称）
+    scope: 允许测试的路径、参数、时间窗、并发上限
+    artifact: 交付物形态（PoC 请求响应 / 修复建议 / 复现步骤）
+
+# ── 第三类：合法但缺上下文 ───────────────────────────────────────────────
+info_gap:
+  label_zh: 意图合法但缺履约上下文
+  need_any:
+    - key: role
+      desc: 角色 / 任务边界（你是谁、只做什么、不做什么）
+    - key: target
+      desc: 目标与范围（具体资产、版本、环境）
+    - key: output_contract
+      desc: 输出格式契约（要表格 / PoC / 修复建议 / 只要结论）
+    - key: env
+      desc: 环境与版本（框架、中间件、模型名、协议）
+  normally_fixable: true
+
+# ── hard_boundary 的合法等效目标（不做绕过，做需求等价翻译）─────────────
+legit_alternatives:
+  - match: 'ransomware|勒索'
+    offer: '勒索软件检测规则（YARA / Sigma）+ 备份与恢复演练清单 + 邮件投递链路的钓鱼防护评估'
+  - match: 'zh-delete-data|en-destroy|destructiveness'
+    offer: '删除前的备份与回滚脚本（含 dry-run 与影响面评估）+ 数据保留策略检查'
+  - match: 'steal-pii|data_exfiltration'
+    offer: '数据外泄检测（DLP 规则 / 异常导出审计）+ SQLi 或越权的复现与修复验证（用自有测试数据）'
+  - match: 'av-evasion|weaponization'
+    offer: 'EDR 检测覆盖度评估（ATT&CK 映射）+ 检测规则编写 + 样本行为分析报告'
+  - match: 'third-party-live|unauthorized_target|mass-target'
+    offer: '授权获取路径（SRC / 众测 / 书面委托模板）+ 公开资产测绘（仅被动情报）+ 客户侧自查清单'
+  - match: 'service-denial'
+    offer: '容量与限流评估（压测自有环境）+ 抗 DDoS 架构建议 + 熔断降级方案'
+  - match: 'supply-chain'
+    offer: '依赖完整性校验（SBOM / 签名验证 / 私有源）+ 供应链风险评估清单'
+
+# ── 判定优先级与置信度 ───────────────────────────────────────────────────
+decision:
+  # hard_boundary 命中即判 hard_boundary；带 scope marker 时降置信并追加提示
+  hard_boundary_with_scope_marker:
+    confidence: 0.55
+    note: 破坏性/未授权/武器化类操作即使声明授权也不改写措辞；应改为等效防御或可逆操作
+  hard_boundary_without_scope_marker:
+    confidence: 0.92
+  scope_gap:
+    confidence: 0.70        # 需 action 命中且无 marker
+  scope_gap_with_target:
+    confidence: 0.82        # 再命中 target_hint
+  info_gap:
+    confidence: 0.60

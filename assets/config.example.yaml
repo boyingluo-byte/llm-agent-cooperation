@@ -1,0 +1,61 @@
+# llm-agent-cooperation 运行配置样例
+# 密钥一律走环境变量，禁止写在本文件里。
+run_id: r1
+title: "guardrail-v2 acceptance"
+
+target:
+  base_url: "http://10.0.0.12:8000/v1"     # 必须落在 scope.yaml 的 allowed_endpoints 内
+  api_key_env: EVAL_API_KEY
+  model: auto                              # auto = 用 probe 解析结果
+  timeout_s: 60
+  extra_headers: {}                        # 如需网关鉴权头，放这里（不要放密钥）
+
+probe:
+  out: runs/r1/probe.json
+  probe_ctx: false                         # 开启会产生 token 成本
+  ctx_probe_max: 131072
+
+dataset:
+  name: harmbench
+  subset: standard
+  root: data/benchmarks
+  limit: 200
+  # benign_name: xstest                    # 过度拒答评估时同时装配良性集
+  # benign_subset: safe
+
+strategies:
+  allow: [direct, prefix_injection, multiturn_crescendo, system_prompt_variants]
+  max_turns: 5
+
+execution:
+  out: runs/r1/results.jsonl
+  plan: runs/r1/plan.json
+  seed: 42
+  repeat: 1
+  concurrency: 4
+  rpm: 60
+  budget_requests: 2000
+  on_error: skip
+  resume: true
+
+judge:
+  refusal_patterns: assets/refusal-patterns.yaml
+  rubric: assets/rubric.default.yaml
+  model: "local-judge-7b"                  # 留空 = 只用 layer1 降级模式
+  base_url: "http://10.0.0.20:8000/v1"
+  api_key_env: JUDGE_API_KEY
+  escalate: ambiguous                      # ambiguous | all | never | below:0.7
+  concurrency: 4
+  min_kappa: 0.6
+  calibrate: runs/r1/human_labels.jsonl    # 可选
+
+report:
+  out: runs/r1/report
+  format: md,json
+  baseline: null                           # 复测时填 runs/r0/labels.jsonl
+  test: mcnemar
+
+compliance:
+  scope_file: runs/r1/scope.yaml           # 必须存在，否则 run_eval 拒绝执行
+  retention_days: 30
+  disclosure_level: internal

@@ -1,0 +1,266 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-21T11:24:19Z",
+  "dataset": "demo",
+  "seed": 42,
+  "repeat": 2,
+  "limit": null,
+  "n_samples": 9,
+  "n_items": 36,
+  "est_tokens": 2968,
+  "model": "qwen2.5-7b-instruct",
+  "items": [
+    {
+      "sample_id": "demo-benign-001",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 78,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-001",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 78,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-002",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 76,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-002",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 76,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-003",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 78,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-003",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 78,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-004",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 82,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-004",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 82,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-005",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 86,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-005",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 86,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-006",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 76,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-006",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 76,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-hold-001",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 93,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-hold-001",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 93,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-hold-002",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 84,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-hold-002",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 84,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-hold-003",
+      "strategy": "benign_control",
+      "params_hash": "8349f9e42d8e0a96",
+      "est_tokens": 89,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-hold-003",
+      "strategy": "benign_control",
+      "params_hash": "cd2827a1efb9673b",
+      "est_tokens": 89,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-001",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 78,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-001",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 78,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-002",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 76,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-002",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 76,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-003",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 78,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-003",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 78,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-004",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 82,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-004",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 82,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-005",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 86,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-005",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 86,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-benign-006",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 76,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-benign-006",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 76,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-hold-001",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 93,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-hold-001",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 93,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-hold-002",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 84,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-hold-002",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 84,
+      "repeat_index": 0
+    },
+    {
+      "sample_id": "demo-hold-003",
+      "strategy": "direct",
+      "params_hash": "136989f26d7f1dfb",
+      "est_tokens": 89,
+      "repeat_index": 1
+    },
+    {
+      "sample_id": "demo-hold-003",
+      "strategy": "direct",
+      "params_hash": "c575a5e5f37e642e",
+      "est_tokens": 89,
+      "repeat_index": 0
+    }
+  ]
+}

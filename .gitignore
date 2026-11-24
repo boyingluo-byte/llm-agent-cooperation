@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行产物（脚本 --out 输出）
+triage.json
+triage.md
+runs/
+out/
+
+# 本地评测配置（含端点与凭据，样例见 assets/config.example.yaml）
+config.yaml
+config.local.yaml
+refusals.jsonl
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

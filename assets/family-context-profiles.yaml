@@ -1,0 +1,626 @@
+# 模型家族语境画像（Family Context Profiles）
+#
+# 用途：adapt.py 的数据源。输入「识别出的模型家族 + 任务类别」，输出为该家族定制的
+#       Engagement Context Block（ECB）。
+#
+# ══════════════════════════════════════════════════════════════════════
+# 这个文件是什么 / 不是什么
+# ══════════════════════════════════════════════════════════════════════
+# 是：一张「同一份授权事实，按模型家族的不同敏感点重新组织措辞与结构」的参数表。
+# 不是：越狱话术库 / 按家族投放的 payload 表。
+#
+# 为什么不做 payload 层：
+#   1. 半衰期周级（随安全微调失效），无法作为可回归的工程资产；
+#   2. 商业 API 的 ToS 普遍禁止绕过安全措施，写进方案文档是合规负资产；
+#   3. 更关键——它解决的不是真问题。拒答的主因是信息缺失（见 SKILL.md §1 四因模型），
+#      补信息命中率远高于换措辞，且越界请求仍会被拒（安全能力不被削弱）。
+#
+# ══════════════════════════════════════════════════════════════════════
+# 纪律（违反即产生不可信数据）
+# ══════════════════════════════════════════════════════════════════════
+# 1. prior_reason_mix 是**先验假设**，不是实测值。全部标 confidence: tentative，
+#    实测值由 measure_cooperation.py 写入 calibration 字段覆盖，不得手工编造。
+# 2. rationale 只能引用可公开观察的事实（API 形态、语言、tokenizer、公开 model card），
+#    不得写「GPT 对 X 特别敏感」这类无来源断言。
+# 3. match 仅用于把 fingerprint.py 的 family id 或 model_id 映射到画像，不做能力断言。
+
+version: "1.0"
+
+meta:
+  name: family-context-profiles
+  n_profiles: 21
+  knobs: 9
+  prior_discipline: >-
+    prior_reason_mix 为假设值，confidence 恒为 tentative；calibration 为 null 时，
+    报告的 ΔCRLT 只能作为该次观测，不得当作家族固有属性。
+  calibration_source: measure_cooperation.py --write-back
+  derived_discipline: >-
+    带 derived_from 的画像（step/spark/baichuan/internlm → qwen，cohere → generic_en）
+    的 9 个旋钮是继承值，不是测量值；只有 calibration 非 null 的画像才有实测依据。
+    继承画像的作用是让 --family 能解析、让矩阵有起点，不构成家族结论。
+
+# ══════════════════════════════════════════════════════════════════════
+# 八个语境旋钮（可渲染的有限取值）
+# ══════════════════════════════════════════════════════════════════════
+# 设计原则：每个旋钮只调「信息组织方式」，不调「模型是否应当拒绝」。
+# 不存在让模型放弃判断的档位——最激进的一档也只是把授权事实说得更完整。
+knobs:
+
+  ecb_placement:
+    what: ECB 该放在消息序列的哪个位置
+    levels:
+      system:      放 system 消息（要求该端点确实尊重 system 角色）
+      user_prefix: 放第一条 user 消息开头（端点忽略 system 时最稳）
+      first_turn:  作为独立的第一轮对话，之后的任务另起一轮
+    why: >-
+      这是最容易被忽略、但影响最大的一档：很多自建/国内端点会静默丢弃 system 消息，
+      此时 ECB 写得再完整也等于没写（模型只看到任务文本）。
+      判断方法：发一条 system="只回答 OK" + user="你好" 的请求，若回复不是 OK 即不尊重 system。
+
+  authorization_signal:
+    what: 授权事实的呈现完整度
+    levels:
+      full:    授权类型 + 签发方 + 编号/引用 + 有效期 + 交战规则（最完整）
+      compact: 授权类型 + 签发方 + 范围（省略有效期与 ROE）
+      minimal: 一行声明「已授权，范围见 scope」
+    why: 授权信号缺失是拒答首因；但过长会稀释注意力，故按家族给不同档位
+
+  role_framing:
+    what: 给模型的身份锚点
+    levels:
+      defensive_engineer: 我方安全工程师，职责是验证防护与输出加固建议
+      pentest_consultant: 受委托的第三方渗透测试顾问，交付物是风险证明
+      research:          安全研究人员，产出可复现的观测与结论
+      none:              不设角色（部分家族对角色设定反而更警觉）
+    why: 角色是"可执行的身份"，不是"解除限制"；缺失角色时模型自行推断，方差更大
+
+  intent_disambiguation:
+    what: 明确「为什么做这件事、产出物给谁」
+    levels:
+      defensive_purpose:  目的是验证防护有效性，产出加固建议
+      verification_only:  只做存在性验证，不做武器化，不落地利用链
+      dual_use:           同时说明攻击面与缓解措施
+      none:               不额外说明（依赖 scope 本身传达意图）
+    why: 意图歧义是第二因；明确产出物形态能显著降低"可能被滥用"的最坏情况推断
+
+  scope_granularity:
+    what: 范围描述的粒度
+    levels:
+      asset_list:    逐个列出域名 / IP:端口 / CIDR
+      asset_compact: 一行列出关键资产 + 明确 out_of_scope
+      narrative:     用自然语言描述边界（最弱，仅在无法列举时用）
+    why: 范围不可判定时模型按最坏情况处理；粒度越细，误判空间越小
+
+  output_contract:
+    what: 对回答形态的约束
+    levels:
+      strict: 结论 + 置信度 + 依据 + 缺口（四条固定）
+      light:  结论 + 依据（两条）
+      none:   不约束
+    why: 开放式请求更容易被判定为"高风险开放请求"；结构化契约把它变成工程任务
+
+  language:
+    what: 语境语言
+    levels:
+      zh:        中文语境（授权表述、法规引用用中文）
+      en:        英文语境
+      bilingual: 中英并列（跨语言家族或不确定时）
+    why: 中文原生家族在中文授权语境下的拒答率与英文语境不同；这不是翻译问题，是语境问题
+
+  chain_of_thought:
+    what: 是否要求先分析再给步骤
+    levels:
+      analysis_first: 先给前置条件与判定依据，再给操作步骤
+      direct:         直接给结论与步骤
+    why: 推理型模型（R1 / o 系）在 analysis_first 下更稳定；非推理型模型可能被拖长而跑偏
+
+  refusal_escape_hatch:
+    what: 是否显式给模型「合法拒绝部分内容」的出口
+    levels:
+      allow_partial_refusal: 明确「超出 scope 的部分请直接指出并拒绝，其余部分继续」
+      none:                   不提供
+    why: 强制"绝不能拒绝"会让模型整体变保守；给出拒绝通道反而提升其余部分的合作率
+         ——这是本 Skill 里最反直觉但最稳定的一条经验
+
+# ══════════════════════════════════════════════════════════════════════
+# 家族画像
+# ══════════════════════════════════════════════════════════════════════
+profiles:
+
+  # ── 海外旗舰（闭源 API）────────────────────────────────────────────
+  - id: openai_gpt
+    display: OpenAI GPT / o 系列
+    match: ["openai_gpt", "gpt", "o1", "o3", "o4"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.35, policy_boundary: 0.15, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: en
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      system 角色遵守度高，ECB 放 system 比放 user 稳定（放 user 会与任务文本争夺注意力）。
+      平台侧另有输入审核层，措辞偏"评估/验证"可减少被审核层拦截的概率。
+      o 系推理模型对 analysis_first 收益明显。
+    boundary_notes: 平台审核层独立于模型判断，某些词面即使意图合法也可能被拦，此时换等效表述或换入口。
+    calibration: null
+
+  - id: anthropic_claude
+    display: Anthropic Claude 系列
+    match: ["anthropic_claude", "claude", "sonnet", "opus", "haiku"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.35, policy_boundary: 0.15, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: pentest_consultant
+      intent_disambiguation: dual_use
+      scope_granularity: asset_list
+      output_contract: strict
+      language: en
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      对 XML 结构化标签敏感（把 ECB 包进 <engagement_context> 可提升可解析性）；
+      拒答多为"解释型"，即给了原理但扣住操作细节——属软拒绝，补 scope 粒度比换措辞有效。
+      长 system prompt 容忍度高，可承载完整 ROE。
+    boundary_notes: 软拒绝时先补齐 scope 与产出物形态；若仍 withhold，多半落在政策硬边界，走等效防御侧问法。
+    calibration: null
+
+  - id: google_gemini
+    display: Google Gemini / Gemma
+    match: ["google_gemini", "gemini", "gemma", "palm"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.35, intent_ambiguity: 0.35, policy_boundary: 0.20, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: research
+      intent_disambiguation: verification_only
+      scope_granularity: asset_list
+      output_contract: light
+      language: en
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      原生 API 有独立 safety settings 层，与模型判断分离；请求形态越"研究/验证"，越少触发该层。
+      开源 Gemma 走兼容层时安全层由部署方决定，行为差异大，故 profile 只作为起点。
+    boundary_notes: safety settings 可配置（若为自建/Vertex），但调低阈值属改变产品安全策略，需授权决策，不在本 Skill 范围。
+    calibration: null
+
+  # ── 开源权重（多为自建部署）────────────────────────────────────────
+  - id: meta_llama
+    display: Meta Llama 系列
+    match: ["meta_llama", "llama", "codellama"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.35, intent_ambiguity: 0.30, policy_boundary: 0.10, knowledge_gap: 0.25}
+    knobs:
+      authorization_signal: compact
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_compact
+      output_contract: strict
+      language: en
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      自建部署的安全对齐强度取决于底座版本与微调，方差极大；真正的瓶颈常是
+      工具/版本知识缺口（幻觉命令、错版本 API），故 knowledge_gap 先验调高。
+      output_contract 用 strict 是为了压制幻觉：要求给置信度与依据，空话会暴露。
+    boundary_notes: 同一 model_id 可能是任意微调产物，画像只能作起点，必须实测校准。
+    calibration: null
+
+  - id: mistral
+    display: Mistral / Mixtral 系列
+    match: ["mistral", "mixtral", "codestral", "ministral"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.35, intent_ambiguity: 0.30, policy_boundary: 0.10, knowledge_gap: 0.25}
+    knobs:
+      authorization_signal: compact
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_compact
+      output_contract: strict
+      language: bilingual
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      欧洲团队常用英/法双语语境；SentencePiece 系对空白与前缀敏感，模板里的换行与缩进
+      会改变实际 token 形态，故建议 ECB 保持扁平结构（不叠多层 YAML 缩进）。
+    boundary_notes: 小参数版本能力有限，拒答少但错答多，别把"配合"误当"可用"。
+    calibration: null
+
+  - id: yi_01ai
+    display: 零一万物 Yi
+    match: ["yi_01ai", "yi-"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.35, policy_boundary: 0.10, knowledge_gap: 0.15}
+    knobs:
+      authorization_signal: compact
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_compact
+      output_contract: light
+      language: bilingual
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      架构源于 Llama，行为层与 Llama 接近，主要靠 model_id 与 tokenizer 区分；
+      中英双语能力均衡，bilingual 语境可减少语言切换导致的判定漂移。
+    boundary_notes: 与 Llama 画像高度重叠，实测若无差异应合并处理，不要为差异而差异。
+    calibration: null
+
+  # ── 国内家族（中文原生）────────────────────────────────────────────
+  - id: qwen
+    display: 阿里通义千问 Qwen
+    match: ["qwen", "tongyi"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      中文原生模型，「渗透测试」在中文语境里比英文 penetration testing 更容易被读成攻击意图，
+      故 intent_ambiguity 先验调高，需用「授权 + 产出物」双重限定。
+      中文授权表述（含内部工单/合同编号）比英文 ECB 更贴合其训练分布。
+    boundary_notes: 中文合规语境下的拒答可能与安全无关（内容合规），此时改问法无效，应换表述而非加压。
+    calibration: null
+
+  - id: deepseek
+    display: DeepSeek
+    match: ["deepseek"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.35, policy_boundary: 0.10, knowledge_gap: 0.15}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      推理链外显（R1 类）时 analysis_first 与其原生输出形态一致，摩擦最小；
+      代码与中文压缩率高，技术上下文可给得更长而不爆上下文。
+    boundary_notes: 推理链外显会放大"自我说服"也放大"自我怀疑"；若首轮拒答，第二轮补 scope 通常比补措辞有效。
+    calibration: null
+
+  - id: zhipu_glm
+    display: 智谱 GLM / ChatGLM
+    match: ["zhipu_glm", "glm", "chatglm"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.35, intent_ambiguity: 0.40, policy_boundary: 0.15, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      合规类拒答占比高于纯安全类（内容合规语境更重）；「攻击/入侵」等词面敏感度高于
+      「评估/验证/加固」。因此 intent 段要显式写出交付物是加固建议，而不只是"我授权了"。
+    boundary_notes: 若拒答措辞指向"内容合规"而非"未授权"，补授权无效，应改写任务表述为防御侧产出。
+    calibration: null
+
+  - id: moonshot
+    display: Moonshot Kimi
+    match: ["moonshot", "kimi"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.35, policy_boundary: 0.10, knowledge_gap: 0.15}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: pentest_consultant
+      intent_disambiguation: dual_use
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      长上下文为主要卖点，可承载完整 ROE + 资产清单 + 历史发现，不需压缩 ECB；
+      结构化长输入是它的优势区间，故 authorization_signal 用 full 而非 compact。
+    boundary_notes: 长上下文不等于高遵守率，ECB 仍应放在最前，且只放一次。
+    calibration: null
+
+  - id: ernie
+    display: 百度文心 ERNIE
+    match: ["ernie", "wenxin", "文心"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.35, intent_ambiguity: 0.40, policy_boundary: 0.15, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: verification_only
+      scope_granularity: asset_list
+      output_contract: light
+      language: zh
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      国内合规审查链路较重，"验证存在性 / 输出加固建议"的表述比"测试利用"通过率高；
+      输出契约用 light 而非 strict，避免过多格式要求被当作越界索取。
+    boundary_notes: 合规类拦截可能在模型之前发生（平台层），改 prompt 无效，应换入口或换表述层级。
+    calibration: null
+
+  - id: hunyuan
+    display: 腾讯混元 Hunyuan
+    match: ["hunyuan", "混元"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.35, intent_ambiguity: 0.40, policy_boundary: 0.15, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: verification_only
+      scope_granularity: asset_list
+      output_contract: light
+      language: zh
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      与 ERNIE 同属国内合规链路较重的家族，画像暂按同类处理；
+      差异需实测确认，未确认前不得声称二者行为不同（故 confidence: tentative）。
+    boundary_notes: 同 ERNIE；家族间差异未实测前应按同一画像处理，避免制造伪精度。
+    calibration: null
+
+  - id: doubao
+    display: 字节豆包 Doubao
+    match: ["doubao", "豆包", "skylark"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: light
+      language: zh
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      面向 C 端场景为主，安全语境下的拒答倾向偏高；用「内部安全团队 + 具体资产 + 加固产出」
+      三重限定可降低误判。技术深度类任务（代码审计）通常比"攻击步骤"类更容易获得配合。
+    boundary_notes: C 端产品线的安全策略可能严于 API 企业版；同一家族不同入口行为可能不同，需分别实测。
+    calibration: null
+
+  - id: minimax
+    display: MiniMax（abab / M 系列）
+    match: ["minimax", "abab"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: light
+      language: zh
+      chain_of_thought: direct
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      中文原生，安全语料覆盖相对头部家族薄，知识缺口可能高于均值；
+      故 output_contract 保留"给依据"的要求，用于暴露幻觉而非掩盖。
+    boundary_notes: 若出现答非所问（而非拒答），归因是知识缺口，补版本/源码上下文，不要加压授权段。
+    calibration: null
+
+  - id: step
+    display: 阶跃星辰 Step 系列
+    match: ["step", "阶跃", "step-2"]
+    confidence: tentative
+    derived_from: qwen
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      未做独立测量：档位继承自 qwen（同为中文原生、system 角色遵守度较高的假设），不是对阶跃的实测结论。差异点只有服务形态（多为云 API + 独立审核层）。跑 measure_cooperation.py --write-back 后用实测覆盖。
+    boundary_notes: 审核层在模型之外：词面合法但意图被拦时换等效表述/换入口，不要加压授权段。
+    calibration: null
+
+  - id: spark
+    display: 科大讯飞 星火 Spark
+    match: ["spark", "xinghuo", "讯飞", "星火"]
+    confidence: tentative
+    derived_from: qwen
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      未做独立测量：档位继承自 qwen（中文原生 + 企业 API 场景的保守假设）。星火面向政企，常见「合规话术式拒答」，先用 role_framing + authorization_signal 试探，无效再考虑 user_prefix 放置。实测后覆盖。
+    boundary_notes: 政企版可能对「渗透测试」词面直接拒；此时把任务改写成「安全验证/合规检查」的等效表述，不要伪造授权文件。
+    calibration: null
+
+  - id: baichuan
+    display: 百川智能 Baichuan
+    match: ["baichuan", "百川"]
+    confidence: tentative
+    derived_from: qwen
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      未做独立测量：档位继承自 qwen。百川开源系可自托管，system 通道是否保留取决于推理框架与模板（Baichuan2 系模板对 system 支持弱），若 ΔCRLT=0 先用 --set 换 user_prefix 验证管道。
+    boundary_notes: 自托管时常见模板丢 system；先查 chat_template，再谈措辞。
+    calibration: null
+
+  - id: internlm
+    display: 上海 AI Lab 书生·浦语 InternLM
+    match: ["internlm", "书生", "浦语", "xcomposer"]
+    confidence: tentative
+    derived_from: qwen
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: system
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: strict
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      未做独立测量：档位继承自 qwen。InternLM 系开源、常经 LMDeploy/vLLM 暴露，OpenAI 兼容层的 system 透传质量因部署而异；ΔCRLT=0 时优先做放置对照。
+    boundary_notes: 学术向模型对「攻击」词面敏感度中等，但对「未授权」表述敏感；把 scope 写实比堆授权段更有效。
+    calibration: null
+
+  - id: cohere
+    display: Cohere Command R / R+
+    match: ["cohere", "command-r", "command-a"]
+    confidence: tentative
+    derived_from: generic_en
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: light
+      language: en
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      未做独立测量：档位继承自 generic_en（英文企业向、RAG 工具调用为主）。Command 系对「分级/引用」式输出契约响应较好，故保留 output_contract=light 而不是 strict。实测后覆盖。
+    boundary_notes: 对安全类请求常要求「业务目的」；补 purpose 比补授权更有用。
+    calibration: null
+
+  # ── 通用回退（识别不确定时用）──────────────────────────────────────
+  - id: generic_zh
+    display: 通用中文模型（家族未识别）
+    match: ["generic_zh"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: light
+      language: zh
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      指纹无法判定家族时的稳妥起点：完整授权 + 明确产出物 + 中文语境。
+      这是覆盖拒答首因（授权 40% + 意图 40%）的最大公约配置，不含任何家族专属假设。
+    boundary_notes: 用 generic 画像跑出的数据不能反推家族特征；要谈家族差异必须先识别家族。
+    calibration: null
+
+  - id: generic_en
+    display: 通用英文模型（家族未识别）
+    match: ["generic_en"]
+    confidence: tentative
+    prior_reason_mix: {auth_missing: 0.40, intent_ambiguity: 0.40, policy_boundary: 0.10, knowledge_gap: 0.10}
+    knobs:
+      authorization_signal: full
+      ecb_placement: user_prefix
+      role_framing: defensive_engineer
+      intent_disambiguation: defensive_purpose
+      scope_granularity: asset_list
+      output_contract: light
+      language: en
+      chain_of_thought: analysis_first
+      refusal_escape_hatch: allow_partial_refusal
+    rationale: >-
+      与 generic_zh 同构，仅语言不同。存在的意义是让"语言"这个变量可被单独测试
+      （同配置换语言 → 观察拒答率是否变化，这是可证伪的实验）。
+    boundary_notes: 同 generic_zh。
+    calibration: null
+
+# ══════════════════════════════════════════════════════════════════════
+# 任务类别 → 旋钮微调
+# ══════════════════════════════════════════════════════════════════════
+# 同一家族在不同任务类别上的拒答触发点不同：
+#   「给出攻击步骤」比「解释漏洞原理」更易触发；「写检测规则」几乎不触发。
+# 微调只允许「加强意图澄清 / 收紧输出契约」，不允许放松任何东西。
+task_category_overrides:
+
+  检测规则:
+    rationale: 产出物是拦截规则，天然防御性；不需要额外澄清，重点在要求可执行
+    set: {intent_disambiguation: defensive_purpose, output_contract: strict}
+
+  漏洞原理:
+    rationale: 原理讲解易被误判为"教攻击"；用"培训/审计视角"限定
+    set: {intent_disambiguation: dual_use, output_contract: strict}
+
+  加固配置:
+    rationale: 纯防御产出，拒答率最低；契约可放宽以换取可执行细节
+    set: {intent_disambiguation: defensive_purpose, output_contract: light}
+
+  日志分析:
+    rationale: 数据处理类，需强调最小化与脱敏，避免隐私顾虑式拒答
+    set: {intent_disambiguation: defensive_purpose, output_contract: strict}
+
+  代码审计:
+    rationale: 涉及具体漏洞代码时最易触发；必须绑定"自建靶场/自有代码"事实
+    set: {intent_disambiguation: verification_only, scope_granularity: asset_list}
+
+  Agent工程:
+    rationale: 元讨论（如何设计 Agent），几乎无安全触发点；保持轻量
+    set: {output_contract: light}
+
+# ══════════════════════════════════════════════════════════════════════
+# 已知的反模式（防止把工具用成"话术炼金术"）
+# ══════════════════════════════════════════════════════════════════════
+anti_patterns:
+  - pattern: 同一会话里对不同家族轮换 try 所有 profile
+    why_bad: 变量不受控，且会把"信息补齐"退化成"措辞碰运气"
+    correct: 一次只测一个 profile 的一个旋钮，配对比较
+  - pattern: 把 calibration 字段手填成"效果很好"
+    why_bad: 破掉唯一的数据可信度来源
+    correct: 只由 measure_cooperation.py --write-back 写入，带 n 与 CI
+  - pattern: 用 generic 画像的数据声称"某家族拒答率高"
+    why_bad: 家族未识别时数据不含家族信息
+    correct: 先 fingerprint.py 识别（并要求置信度达标），再谈家族
+  - pattern: 为了让模型配合而谎报 authorization.type
+    why_bad: 属伪造授权，被追问即崩，且是真实合规风险
+    correct: 用 own_lab / ctf，诚实且同样有效
